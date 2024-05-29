@@ -140,43 +140,78 @@ true_vacant / homeless_people
 
 homeless_people / true_vacant
 ##########################################################################################
-##################################### COUNTY LEVEL #######################################
+##################################### CITY LEVEL #########################################
 ##########################################################################################
 # DATASETS
+hud_pit <- read.csv("2022-PIT-Counts-by-CoC.csv")
+hud_pit <- hud_pit %>%
+  select(1:4) %>%
+  rename(homeless_pop = Overall.Homeless..2022) %>%
+  mutate(homeless_pop = as.numeric(gsub(",", "", homeless_pop))) %>%
+  filter(!is.na(homeless_pop))
 
+glimpse(hud_pit)
+view(hud_pit)
+
+
+
+  
+### Reno/Washoe ###
 # ACS B25004 Vacancy Status
-vacancy_status_county <- get_acs(
+vacancy_status_wash <- get_acs(
   geography = "county",
+  state = "NV",
   table = "B25004",
   survey = "acs1",
   year = 2022,
   cache_table = TRUE
 )
-
 # ACS B25130 Other vacancy status
-other_vacancy_status_county <- get_acs(
+other_vacancy_status_wash <- get_acs(
   geography = "county",
+  state = "NV",
   table = "B25130",
   survey = "acs1",
   year = 2022,
   cache_table = TRUE
 )
+# Pick Washoe
+vacancy_status_wash <- vacancy_status_wash %>%
+  filter(NAME == "Washoe County, Nevada")     # cant get estimates for other
+                                              # probably too small
+# label that shiiit!
+vacancy_status_wash <- left_join(vacancy_status_wash,
+                               variable_labels,
+                               by = c("variable" = "name"))
 
-# Data labels
-variable_labels <- load_variables(
+# re-label total
+vacancy_status_wash[1, "label"] <- "Total"
+
+# get rid of common prefix
+vacancy_status_wash$label[2:8] <- gsub("^Estimate!!Total:!!", "",
+                                 vacancy_status_wash$label[2:8])
+
+# reasonable items to remove
+removes <- c("Rented, not occupied", "Sold, not occupied",
+             "For seasonal, recreational, or occasional use", "For migrant workers")
+true_vacant_washoe <- remove_subsets_update_total(vacancy_status_wash,
+                                                  removes)
+# How granular can I get in washoe
+vac_stat <- get_acs(
+  geography = "urban area",
+  state = "NV",
+  table = "B25004",
+  survey = "acs1",
   year = 2022,
-  dataset = "acs1/subject",
-  cache = TRUE
+  cache_table = TRUE
 )
+reno <- vac_stat %>%
+  filter(NAME == "Reno city, Nevada")
+reno <- left_join(reno, variable_labels,
+                  by = c("variable" = "name"))
+reno[1, "label"] <- "Total"
+reno$label[2:8] <- gsub("^Estimate!!Total:!!", "",
+                        reno$label[2:8])
 
-# Label our variables
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
